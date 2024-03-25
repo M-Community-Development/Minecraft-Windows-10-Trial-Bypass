@@ -1,36 +1,47 @@
-name: Build MinecraftWindows10Bypass
+name: CI
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-
   build:
     runs-on: windows-latest
-    
+
     steps:
-    - name: Checkout Code
+    - name: Checkout code
       uses: actions/checkout@v2
-      
-    - name: Setup Microsoft Visual C++ Environment
-      uses: microsoft/setup-msbuild@v1.1
-      
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v3
+
+    - name: Set up Qt
+      uses: eliasnahd/setup-qt@v1
       with:
-        version: 5.15.2
-        modules: 'qtscript'
-        
-    - name: Build
+        qt-version: 5.15.2
+        msvc-version: 14.2
+
+    - name: Prepare shadow build directory
       run: |
-        qmake MinecraftWindows10Bypass.pro
-        nmake
-        
-    - name: Upload Artifact
+        md build
+
+    - name: Configure and build the project
+      run: |
+        (cd build && qmake ..\MinecraftWindows10Bypass.pro -r -spec win32-msvc "CONFIG+=release" && msbuild /p:Configuration=Release /m /p:UseWdkBuiltIns=true /p:OutDir=. ..\build\MinecraftWindows10Bypass.vcxproj)
+
+    - name: Copy files
+      run: |
+        copy /y "$(System.DefaultWorkingDirectory)\build\release\MinecraftWindows10Bypass.exe" "$(System.DefaultWorkingDirectory)\release\MinecraftWindows10Bypass.exe"
+        mkdir -p release/assets_b
+        cp -R QtBuild/release/assets_b/* release/assets_b/
+
+    - name: Package the release
+      run: |
+        cd release
+        zip -r MinecraftWindows10Bypass.zip .
+        mv MinecraftWindows10Bypass.zip ..
+
+    - name: Upload the release
+      if: github.event_name == 'push'
       uses: actions/upload-artifact@v2
       with:
         name: MinecraftWindows10Bypass
-        path: release/
+        path: release/MinecraftWindows10Bypass.zip
