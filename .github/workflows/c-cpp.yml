@@ -13,7 +13,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Qt
+    - name: Set up Qt for build
       uses: eliasnahd/setup-qt@v1
       with:
         qt-version: 5.15.2
